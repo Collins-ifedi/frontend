@@ -1130,7 +1130,7 @@ class VoxaroidChat {
         this.websocket.send(
           JSON.stringify({
             type: "init",
-            userId: Number.parseInt(this.currentUser.userId, 10), // Ensure it's an integer
+            userId: Number.parseInt(this.currentUser.userId), // Ensure it's an integer
           }),
         )
       }
