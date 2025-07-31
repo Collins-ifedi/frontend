@@ -192,7 +192,7 @@ class VoxaroidChat {
       this.currentUser = {
         email: "guest@voxaroid.com",
         username: "Guest User",
-        userId: "guest_" + Date.now(),
+        userId: this.generateUserId(),
         loginTime: Date.now(),
         provider: "guest",
         isGuest: true,
