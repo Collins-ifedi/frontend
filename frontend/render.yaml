@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: voxaroid-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_BACKEND_URL
+        value: https://your-server-py-domain.onrender.com
+      - key: NEXT_PUBLIC_LEMONSQUEEZY_STORE_ID
+        value: your_lemonsqueezy_store_id
+    healthCheckPath: /
+    autoDeploy: true
