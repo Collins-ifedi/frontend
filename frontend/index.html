@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voxaroid - AI Chat Platform</title>
+
+   Tailwind: set dark mode behavior BEFORE the CDN script 
+  <script>
+    window.tailwind = { config: { darkMode: 'class' } };
+  </script>
+   Apply saved theme BEFORE paint to prevent flash 
+  <script>
+    try {
+      const saved = localStorage.getItem('voxaroid_theme') || 'light';
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    } catch (e) {}
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    /* Custom Voxaroid Icon */
+    .voxaroid-icon {
+      font-family: 'Arial Black', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative;
+    }
+    .voxaroid-icon::before { content: 'V'; position: absolute; left: 0; }
+    .voxaroid-icon::after { content: 'X'; position: absolute; left: 0.6em; transform: scale(0.8); }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .typing-dots { display: inline-flex; align-items: center; }
+    .typing-dots span { height: 8px; width: 8px; background: #9ca3af; border-radius: 50%; margin: 0 2px; animation: typing 1.4s infinite ease-in-out; }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+    .voice-recording { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+    .file-drop-zone { border: 2px dashed #d1d5db; transition: all 0.3s ease; }
+    .file-drop-zone.dragover { border-color: #667eea; background-color: rgba(102,126,234,0.1); }
+
+    /* Smooth theme transitions */
+    * { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+
+    /* Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
+  </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+   Login Modal 
+  <div id="loginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="relative w-full max-w-md mx-4">
+       Fancy background glow 
+      <div class="absolute inset-0 -z-10 blur-2xl opacity-30 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl"></div>
+
+      <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-2xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 overflow-hidden">
+         Header 
+        <div class="px-8 pt-8 pb-4 text-center">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg mb-3">
+            <span class="text-white font-black">VX</span>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight">Welcome to Voxaroid</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Your AI-powered conversation partner</p>
+        </div>
+
+         Google first 
+        <div class="px-8">
+          <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-callback="handleGoogleSignIn" data-auto_prompt="false"></div>
+          <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="continue_with" data-shape="rectangular" data-logo_alignment="left"></div>
+        </div>
+
+         Divider 
+        <div class="px-8 py-4">
+          <div class="flex items-center gap-4">
+            <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+            <span class="text-xs uppercase tracking-wider text-gray-500">or</span>
+            <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+          </div>
+        </div>
+
+         Auth forms 
+        <div class="px-8 pb-8">
+           Login 
+          <form id="loginForm" class="space-y-5">
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="loginEmail" type="email" required
+                       class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="loginPassword" type="password" required
+                       class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+            <button id="loginBtn" type="submit"
+                    class="w-full py-3 rounded-xl font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-sm">
+              Sign In
+            </button>
+            <div class="text-center text-sm">
+              <button id="showSignupBtn" type="button" class="text-blue-600 dark:text-blue-400 hover:underline">
+                Don’t have an account? Sign up
+              </button>
+            </div>
+            <div class="text-center text-sm">
+              <button id="startVerificationLink" type="button" class="text-blue-600 dark:text-blue-400 hover:underline">
+                Have a code? Verify email
+              </button>
+            </div>
+          </form>
+
+           Signup 
+          <form id="signupForm" class="space-y-5 hidden">
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+              <div class="relative">
+                <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="signupName" type="text" required
+                       class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="signupEmail" type="email" required
+                       class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="signupPassword" type="password" required
+                       class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+            <button id="signupBtn" type="submit"
+                    class="w-full py-3 rounded-xl font-medium text-white bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 shadow-sm">
+              Create Account
+            </button>
+
+            <div class="text-center mt-2">
+              <button id="showLoginBtn" type="button" class="text-blue-600 dark:text-blue-400 hover:underline hidden">
+                Already have an account? Sign in
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   App 
+  <div id="appContainer" class="flex h-[100dvh] hidden overflow-hidden">
+     Sidebar (mobile overlays) 
+    <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 sm:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full lg:translate-x-0 lg:static lg:transform-none transition-transform duration-200 ease-in-out flex flex-col">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="voxaroid-icon text-3xl font-bold">VX</div>
+            <div>
+              <h2 class="font-bold text-lg">Voxaroid</h2>
+              <p id="userPlan" class="text-sm text-gray-500 dark:text-gray-400">Free Plan</p>
+            </div>
+          </div>
+          <button id="upgradeBtn" class="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs rounded-full hover:from-purple-600 hover:to-pink-600">
+            Upgrade
+          </button>
+        </div>
+        <button id="newChatBtn" class="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium transition-colors">
+          <i class="fas fa-plus mr-2"></i>New Chat
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
+        <div id="chatHistory" class="space-y-2"></div>
+      </div>
+
+      <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex gap-2">
+          <button id="settingsBtn" class="flex-1 p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button id="logoutBtn" class="flex-1 p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+     Main 
+    <div class="flex-1 flex flex-col">
+       Header 
+      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex items-center">
+          <button id="sidebarToggle" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 mr-3">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 id="chatTitle" class="text-xl font-semibold">New Chat</h1>
+        </div>
+      </div>
+
+       Messages 
+      <div id="chatMessages" class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
+        <div class="max-w-4xl mx-auto">
+          <div class="text-center py-16 sm:py-20">
+            <div class="voxaroid-icon text-7xl sm:text-8xl font-bold mb-6">VX</div>
+            <h2 class="text-2xl sm:text-3xl font-bold mb-3">Welcome to Voxaroid</h2>
+            <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg">Start a conversation with our AI assistant</p>
+          </div>
+        </div>
+      </div>
+
+       Typing 
+      <div id="typingIndicator" class="px-4 sm:px-6 pb-2 hidden">
+        <div class="max-w-4xl mx-auto">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+              <i class="fas fa-robot text-sm text-gray-500"></i>
+            </div>
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3">
+              <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+       Composer (ChatGPT-like) 
+      <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+        <div class="max-w-4xl mx-auto">
+           Drag-and-drop zone 
+          <div id="fileDropZone" class="file-drop-zone rounded-xl p-8 mb-4 text-center hidden">
+            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+            <p class="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">Drop files here to upload</p>
+            <p class="text-sm text-gray-500">Supports: Images, PDF, DOCX, TXT (Max 10MB)</p>
+          </div>
+
+           Uploaded files 
+          <div id="uploadedFiles" class="mb-3 hidden">
+            <div id="filesList" class="flex flex-wrap gap-2"></div>
+          </div>
+
+           Input capsule 
+          <div class="relative">
+            <div class="group flex items-end bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-2xl px-3 sm:px-4 py-2 sm:py-3">
+               Left action icons 
+              <div class="flex items-center gap-1.5 sm:gap-2 pt-1">
+                <button id="fileUploadBtn" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-600/60 transition-colors">
+                  <i class="fas fa-paperclip"></i>
+                </button>
+                <button id="voiceBtn" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-600/60 transition-colors">
+                  <i class="fas fa-microphone"></i>
+                </button>
+              </div>
+
+               Textarea 
+              <textarea id="messageInput"
+                        placeholder="Message Voxaroid..."
+                        rows="1"
+                        class="flex-1 bg-transparent outline-none resize-none px-2 sm:px-3 text-sm sm:text-base max-h-40 leading-6 sm:leading-7"></textarea>
+
+               Send inside capsule 
+              <button id="sendBtn" class="ml-2 p-2.5 sm:p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+
+             Helper text 
+            <div class="mt-2 text-xs text-gray-500 text-center">
+              Press Enter to send • Shift + Enter for new line
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   Settings Modal 
+  <div id="settingsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold">Settings</h3>
+        <button id="closeSettingsBtn" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+         Theme Toggle 
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="font-medium">Dark Mode</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Toggle dark/light theme</p>
+          </div>
+          <button id="themeToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-600 transition-colors">
+            <span id="themeToggleSpan" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+          </button>
+        </div>
+
+         Font Style 
+        <div>
+          <label class="block font-medium mb-2">Font Style</label>
+          <select id="fontStyle" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"></select>
+        </div>
+
+         Font Size 
+        <div>
+          <label class="block font-medium mb-2">Font Size</label>
+          <select id="fontSize" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700"></select>
+        </div>
+
+         About 
+        <div class="pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h4 class="font-bold mb-3">About Voxaroid</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Voxaroid is an advanced AI chat platform that combines voice and text interactions for seamless conversations with artificial intelligence.
+          </p>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            <p>Version 1.0.0</p>
+            <p>© 2024 Voxaroid. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   Hidden file input 
+  <input id="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.docx,.txt" class="hidden" />
+
+   Toasts 
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+   Scripts 
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/websocket.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/subscription.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/fileUpload.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
