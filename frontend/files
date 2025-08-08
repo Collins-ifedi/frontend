@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voxaroid Chat</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <script>
+      try {
+        if (localStorage.getItem('voxaroid_theme') === 'dark') {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      } catch (e) {}
+    </script>
+</head>
+<body>
+    <div id="appContainer" class="flex h-dvh hidden">
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 sm:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full lg:translate-x-0 lg:static lg:transform-none transition-transform duration-200 ease-in-out flex flex-col h-full">
+            <!-- Sidebar content here -->
+        </div>
+        <div class="flex-1 flex flex-col md:ml-72 lg:ml-80">
+            <div class="flex items-center space-x-3">
+                <!-- Connection status hidden per request -->
+            </div>
+            <!-- Main chat area content here -->
+        </div>
+    </div>
+
+    <script src="js/websocket.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+
+// js/websocket.js
+const WebSocketClient = {
+    updateConnectionStatus(connected) {
+        const statusElement = document.getElementById('connectionStatus');
+        if (!statusElement) {
+            // Indicator removed from UI; nothing to update.
+            return;
+        }
+        const statusText = statusElement.nextElementSibling;
+        if (connected) {
+            statusElement.className = 'w-2 h-2 bg-green-500 rounded-full';
+            if (statusText) statusText.textContent = 'Connected';
+        } else {
+            statusElement.className = 'w-2 h-2 bg-red-500 rounded-full';
+            if (statusText) statusText.textContent = 'Disconnected';
+        }
+    },
+    // Other WebSocket client methods here
+};
+
+// js/settings.js
+const SettingsManager = {
+    loadSettings() {
+        // Load settings logic here
+        this.applyTheme(STATE.settings.theme);
+        this.updateThemeToggle();
+    },
+    applyTheme(theme) {
+        // Apply theme logic here
+    },
+    updateThemeToggle() {
+        // Update theme toggle logic here
+    },
+    // Other settings methods here
+};
+
+// js/main.js
+const MainController = {
+    bindModalCloseEvents() {
+        // Existing modal close event handlers here
+        // Close mobile sidebar when clicking outside main content
+        document.addEventListener('click', (e) => {
+          const sidebar = document.getElementById('sidebar');
+          if (!sidebar) return;
+          const isOpenMobile = !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024;
+          if (isOpenMobile) {
+            const clickedInsideSidebar = sidebar.contains(e.target as Node);
+            if (!clickedInsideSidebar) {
+              sidebar.classList.add('-translate-x-full');
+            }
+          }
+        });
+    },
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+    },
+    // Other main controller methods here
+};
